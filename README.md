@@ -1,89 +1,104 @@
-# 🧠 Handwritten Digit Recognition (MNIST)
+# 🧠 Handwritten Digit Recognizer
 
-A simple Machine Learning project that trains a neural network to recognize handwritten digits (0–9) using the MNIST dataset.
+A from-scratch ML project that trains a **Convolutional Neural Network (CNN)** to recognize handwritten digits (0–9) using the MNIST dataset — then predicts from your own drawn images.
 
-This project walks through the complete ML workflow:
-- Data exploration
-- Model building
-- Training & evaluation
-- Prediction on custom images
+Built with PyTorch. No pretrained models. Everything trained from zero.
 
 ---
 
-## 📂 Project Structure
-```
-digit-recognizer/
-│
-├── 01_explore_data.py # Load + visualize MNIST dataset
-├── 02_build_model.py # Define neural network architecture
-├── 03_train.py # Train model + evaluate + save
-├── 04_predict.py # Predict digits from custom images
-│
-├── model/
-│ └── digit_model.pth # Trained model weights
-│
-├── mnist_samples.png # Sample dataset images
-├── training_loss.png # Loss curve visualization
-│
-├── data/ # Dataset (auto-downloaded)
-├── .gitignore
-└── README.md
-```
+## 📊 Results
 
----
-
-## 📊 Dataset
-
-- **Dataset:** MNIST
-- **Training samples:** 60,000
-- **Test samples:** 10,000
-- **Image size:** 28×28 grayscale
-
-Data is automatically downloaded using `torchvision.datasets`.
+| Metric | Value |
+|---|---|
+| Test Accuracy | **99.67%** |
+| Dataset | MNIST (70,000 images) |
+| Model | Custom CNN |
+| Training Time | ~5–10 min (CPU) |
 
 ---
 
 ## 🧠 Model Architecture
 
-A simple feedforward neural network:
+Upgraded from a simple linear network to a **CNN** for spatial pattern recognition:
+
 ```
-Input (28x28 = 784)
+Input (1 × 28 × 28)
 ↓
-Linear (784 → 128)
+Conv2d(1→32, 3×3) + ReLU + MaxPool → 32 × 14 × 14
 ↓
-ReLU
+Conv2d(32→64, 3×3) + ReLU + MaxPool → 64 × 7 × 7
 ↓
-Linear (128 → 64)
+Conv2d(64→128, 3×3) + ReLU → 128 × 7 × 7
 ↓
-ReLU
+Flatten → Linear(6272→256) + ReLU + Dropout(0.5)
 ↓
-Linear (64 → 10)
+Linear(256→10)
 ↓
 Output (digits 0–9)
 ```
 
-Defined in: `02_build_model.py` :contentReference[oaicite:0]{index=0}
+CNN learns edges → shapes → digit patterns. Far more robust than flat linear layers.
 
 ---
 
 ## ⚙️ Training Details
 
-- Loss Function: CrossEntropyLoss
-- Optimizer: Adam (lr = 0.001)
-- Epochs: 10
-- Batch Size: 64
+| Setting | Value |
+|---|---|
+| Loss Function | CrossEntropyLoss |
+| Optimizer | Adam (lr=0.001) |
+| LR Scheduler | StepLR (step=3, gamma=0.5) |
+| Epochs | 10 |
+| Batch Size | 64 |
 
-Training pipeline implemented in: `03_train.py` :contentReference[oaicite:1]{index=1}
+### Data Augmentation
+Training images are randomly transformed each epoch to improve robustness:
+- Random rotation (±15°)
+- Random affine (translate, scale)
+- Gaussian blur
 
 ---
 
-## 📉 Training Performance
+## 📂 Project Structure
 
-Loss decreases steadily over epochs:
+```
+digit-recognizer/
+├── 01_explore_data.py   # Load + visualize MNIST dataset
+├── 02_build_model.py    # Neural network architecture (linear, for reference)
+├── 03_train.py          # CNN training + evaluation + save weights
+├── 04_predict.py        # Predict digits from custom images
+│
+├── model/
+│   └── digit_model.pth  # Trained CNN weights
+│
+├── mnist_samples.png    # Sample dataset visualization
+├── training_loss.png    # Loss curve
+├── data/                # MNIST dataset (auto-downloaded)
+└── .gitignore
+```
 
-![Training Loss](training_loss.png)
+---
 
-Final test accuracy is printed after training.
+## 🚀 How to Run
+
+```bash
+# 1. Create and activate virtual environment
+python -m venv venv
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # Mac/Linux
+
+# 2. Install dependencies
+pip install torch torchvision matplotlib pillow numpy
+
+# 3. Explore dataset
+python 01_explore_data.py
+
+# 4. Train model
+python 03_train.py
+
+# 5. Predict your own digit
+python 04_predict.py
+```
 
 ---
 
@@ -91,43 +106,59 @@ Final test accuracy is printed after training.
 
 ![MNIST Samples](mnist_samples.png)
 
-Generated using: `01_explore_data.py` :contentReference[oaicite:2]{index=2}
+---
+
+## 📉 Training Loss
+
+![Training Loss](training_loss.png)
+
+Loss drops from ~0.33 → ~0.04 over 10 epochs.
 
 ---
 
-## 🔮 Prediction
+## 🔮 Custom Image Prediction
 
-You can test your model on custom handwritten images:
+Run `04_predict.py` → enter path to your image → get prediction + confidence.
 
-```bash
-python 04_predict.py
-Input: Path to image
-Output: Predicted digit + confidence
+**Preprocessing pipeline:**
+```
+Open image → Grayscale → Crop to digit (bbox)
+→ Add padding → Resize to 28×28
+→ Invert (white digit on black) → Normalize (MNIST stats)
+→ Feed to CNN → Predicted digit + confidence %
+```
 
-Prediction pipeline:
-
-Convert to grayscale
-Crop digit
-Resize to 28×28
-Normalize (MNIST stats)
-Feed into model
-
-Implemented in: 04_predict.py
+**Tips for best results:**
+- Draw on white background with dark/black ink
+- Simple printed-style digits work best (MNIST style)
+- Avoid italic or heavily stylized writing — model trained on printed handwriting only
 
 ---
 
-🚀 How to Run
-1. Install dependencies
-pip install torch torchvision matplotlib pillow
-2. Explore dataset
-python 01_explore_data.py
-3. Train model
-python 03_train.py
-4. Predict custom digits
-python 04_predict.py
-⚠️ Notes
-Model is simple (no CNN), so accuracy is decent but not state-of-the-art
-Works best with clean, centered handwritten digits
-Custom images are preprocessed to match MNIST format
+## ⚠️ Known Limitations
+
+- Trained on MNIST only — stylized, italic, or cursive digits may mispredict
+- Works best with simple, centered, printed-style handwriting
+- No support for multi-digit images (single digit per image)
 
 ---
+
+## 🗺️ Journey / Phases
+
+| Phase | Description | Status |
+|---|---|---|
+| 0 | Project setup, venv, dependencies | ✅ Done |
+| 1 | Explored MNIST dataset | ✅ Done |
+| 2 | Built linear neural network | ✅ Done |
+| 3 | Upgraded to CNN + augmentation → 99.67% | ✅ Done |
+| 4 | Custom image inference | ✅ Done |
+| 5 | Gradio web UI | 🔜 Next |
+
+---
+
+## 🛠️ Tech Stack
+
+- Python 3.12
+- PyTorch + torchvision
+- Pillow (image processing)
+- Matplotlib (visualization)
