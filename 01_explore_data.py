@@ -20,7 +20,7 @@ for i, ax in enumerate(axes.flat):
     ax.axis('off')
 
 plt.suptitle("MNIST Sample Images", fontsize=14)
-plt.tight_layout()
-plt.savefig("mnist_samples.png")
+plt.tight_layout() # Automatically adjusts spacing.
+plt.savefig("mnist_samples.png") # Saves figure to file.
 plt.show()
 print("Saved: mnist_samples.png")
