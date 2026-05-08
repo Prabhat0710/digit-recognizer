@@ -4,58 +4,58 @@ from torchvision import transforms
 from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 
-# ── Model (same architecture) ─────────────────────
-class DigitNet(nn.Module):
+class DigitCNN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.net = nn.Sequential(
+        self.conv = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+        )
+        self.fc = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(784, 128),
+            nn.Linear(128 * 7 * 7, 256),
             nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 10)
+            nn.Dropout(0.5),
+            nn.Linear(256, 10)
         )
     def forward(self, x):
-        return self.net(x)
+        return self.fc(self.conv(x))
 
-# ── Load saved weights ────────────────────────────
-model = DigitNet()
+# ── Load model ────────────────────────────────────
+model = DigitCNN()
 model.load_state_dict(torch.load('model/digit_model.pth'))
 model.eval()
 print("Model loaded.")
 
-# ── Predict function ──────────────────────────────
+# ── Predict ───────────────────────────────────────
 def predict(image_path):
-    img = Image.open(image_path).convert('L')  # grayscale
+    img = Image.open(image_path).convert('L')
 
-    # Crop to digit
-    inverted = ImageOps.invert(img)            # invert to find bbox
-    bbox = inverted.getbbox()                  # find digit bounds
-    img = img.crop(bbox)                       # crop original
-
-    # Add padding
-    img = ImageOps.expand(img, border=60, fill=255)
-
-    # Resize
+    inverted = ImageOps.invert(img)
+    bbox = inverted.getbbox()
+    img = img.crop(bbox)
+    img = ImageOps.expand(img, border=10, fill=255)
     img = img.resize((28, 28))
-
-    # Convert to MNIST style: white digit on BLACK background
-    img = ImageOps.invert(img)                 # NOW invert AFTER resize
+    img = ImageOps.invert(img)
 
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))  # MNIST exact mean/std
+        transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    tensor = transform(img).unsqueeze(0)       # add batch dimension
+    tensor = transform(img).unsqueeze(0)
 
     with torch.no_grad():
         output = model(tensor)
         predicted = output.argmax(dim=1).item()
         confidence = torch.softmax(output, dim=1)[0][predicted].item()
 
-    # Show the image
     plt.imshow(img, cmap='gray')
     plt.title(f"Predicted: {predicted}  |  Confidence: {confidence*100:.1f}%")
     plt.axis('off')
