@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torchvision import transforms
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter
 import matplotlib.pyplot as plt
-
+import numpy as np
 class DigitCNN(nn.Module):
     def __init__(self):
         super().__init__()
@@ -36,13 +36,17 @@ print("Model loaded.")
 # ── Predict ───────────────────────────────────────
 def predict(image_path):
     img = Image.open(image_path).convert('L')
-
-    inverted = ImageOps.invert(img)
-    bbox = inverted.getbbox()
+    
+    # Threshold: force pure black/white (removes gray background)
+    img_array = np.array(img)
+    img_array = (img_array < 128).astype(np.uint8) * 255  # dark pixels = digit
+    img = Image.fromarray(img_array)
+    
+    # Now bbox will work correctly
+    bbox = img.getbbox()
     img = img.crop(bbox)
-    img = ImageOps.expand(img, border=10, fill=255)
+    img = ImageOps.expand(img, border=10, fill=0)  # black border (MNIST style)
     img = img.resize((28, 28))
-    img = ImageOps.invert(img)
 
     transform = transforms.Compose([
         transforms.ToTensor(),
